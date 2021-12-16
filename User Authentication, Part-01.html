@@ -1,0 +1,360 @@
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js?lang=css&amp;skin=sunburst"></script>
+  <style type="text/css">
+</head>
+  
+<style>
+body {
+  font-family: 'apex-5-icon-font';
+  margin: 0;
+}
+html {
+  box-sizing: border-box;
+}
+.about-section {
+  line-height: 1.5;
+  font-family: 'apex-5-icon-font';
+  font-size: 17px;
+  color: black;
+  padding: 7px 30px 7px 15px;
+}
+pre, code {
+    position: relative;
+    background: #13052e;		
+  	border-radius: 15px 15px 15px 15px;
+    display: block;
+    margin-top: 0;
+    margin-bottom: 1rem;
+    overflow: auto;
+    font-size: 14px;
+      font-family: 'apex-5-icon-font';
+    direction: ltr;
+    unicode-bidi: bidi-override;  
+      color: #fff;
+}
+.post-img {
+    width: 100%;
+    height: 370px;
+  }
+ iframe { width: 100%; border-style: none; margin: 0; padding: 0; }
+.attribution { padding-left: 1em; }  
+</style>
+
+<body>
+  <head>
+    <title>How to Make Custom "User Authorization" Schemes in Oracle Apex</title>
+    <meta name="description" content="Today I will try to show you how to create a custom user authorization scheme in Oracle Apex. Today's post is the 1st part of User Authorization. Hope to see all the parts.">
+  </head>
+
+  
+    <div class="about-section" font-size="16px"> 
+            <h2>
+              How to Make Custom Authorization Schemes in Oracle Apex? Part-01 
+            </h2><br>
+        <p>
+            Today I will try to show you how to create a custom Authorization scheme in Oracle Apex. Today's post is the 1st part of Authorization. Hope to see all the parts. 
+        </p>
+            <iframe allowfullscreen="" class="BLOG_video_class" height="348" src="https://www.youtube.com/embed/vSdzwnkFDRs" width="619" youtube-src-id="vSdzwnkFDRs"></iframe>
+        <h2> 
+            <b> Some discussion about Oracle Apex Authorization. </b> 
+        </h2>
+        <p> 
+            "User Authorization" is an important issue for any web application. Without the use of "User Authorization", no application is complete. <br>
+            I will try to show all the important things in the Oracle Apex application through a few parts, including user login according to "User Authorization", user role, user log, user menu usage. Hopefully, if you see all the parts related to "User Authorization", you can easily use "User Authorization" in Oracle Apex. <br>
+        </p>
+        <h2> 
+            <b>Steps to create Oracle Apex User Authentication, Part-1. </b> 
+        </h2>
+        <p>
+            In today's part, I will try to show you how to create user authentication related tables, sequences, packages, trigger keys. Hopefully you can easily use User Authentication for your Oracle Apex application using the SQL code provided by me. <br/><br>
+            <b> 1. CREATE All table................ </b>
+        </p>
+        <pre class="prettyprint lang-scm">
+                    CREATE TABLE  "MY_USERS" 
+               (	"USER_ID" NUMBER, 
+            	"USERNAME" VARCHAR2(50), 
+            	"FULL_NAME" VARCHAR2(100), 
+            	"PHONE_NUMBER" NUMBER(11,0), 
+            	"EMAIL_ADDRESS" VARCHAR2(50), 
+            	"IMAGE" BLOB, 
+            	"IS_ACTIVE" VARCHAR2(10), 
+            	"PIN" VARCHAR2(100)
+            	 CONSTRAINT "MY_USERS_PK" PRIMARY KEY ("USER_ID")
+              USING INDEX  ENABLE
+               )
+            CREATE TABLE  "USERS_LOG" 
+               (	"LOG_ID" NUMBER, 
+            	"IP_ADDRESS" VARCHAR2(30), 
+            	"LOGIN_USER" VARCHAR2(30), 
+            	"LOGIN_TIME" TIMESTAMP (6), 
+            	"LOG_DATE" DATE
+               )  ENABLE ROW MOVEMENT
+            CREATE INDEX  "ACL_USERLOG_IPADD_IDX" ON  "USERS_LOG" ("IP_ADDRESS")
+            CREATE INDEX  "LOG_ID_ACL_USER_LOG_IDX" ON  "USERS_LOG" ("LOG_ID", "LOGIN_USER")
+            CREATE INDEX  "LOG_ID_ACL_USER_LOG_INDX" ON  "USERS_LOG" ("LOG_ID")
+            CREATE TABLE  "E_LOG" 
+               (	"PID" NUMBER, 
+            	"MSG" NVARCHAR2(300), 
+            	"ERR_DATE" DATE DEFAULT sysdate
+               )  ENABLE ROW MOVEMENT
+            CREATE INDEX  "E_LOG_PID_IDX" ON  "E_LOG" ("PID")
+            CREATE TABLE  "USER_GROUP" 
+               (	"OID" NUMBER, 
+            	"PID_PARENT" NUMBER, 
+            	"GROUP_TITLE" NVARCHAR2(30), 
+            	"GROUP_DESCRIPTION" NVARCHAR2(250)
+            	 CONSTRAINT "ACL_GROUP_PK" PRIMARY KEY ("OID")
+              USING INDEX  ENABLE
+               )  ENABLE ROW MOVEMENT
+            CREATE TABLE  "USER_GROUP_MY_STOCK" 
+               (	"PID" NUMBER NOT NULL ENABLE, 
+            	"PID_USER" NUMBER NOT NULL ENABLE, 
+            	"PID_GROUP" NUMBER NOT NULL ENABLE
+            	 CONSTRAINT "USER_GROUP_MY_STOCK_PK" PRIMARY KEY ("PID")
+              USING INDEX  ENABLE
+               )  ENABLE ROW MOVEMENT
+            CREATE TABLE  "IS_ACTIVATE" 
+               (	"OID" NUMBER, 
+            	"STATUS" VARCHAR2(30),
+            	CONSTRAINT "IS_ACTIVATE_PK" PRIMARY KEY ("OID")
+              USING INDEX  ENABLE
+               )  ENABLE ROW MOVEMENT
+        </pre>
+         <p>
+             <b>CREATE All SEQUENCE...............</b> <br>
+         </p>
+        <pre class="prettyprint lang-scm">
+                CREATE SEQUENCE   "MY_USERS_SEQ"  MINVALUE 1 MAXVALUE 9999999999999999999999999999 INCREMENT BY 1 START WITH 361 CACHE 20 NOORDER  NOCYCLE  NOKEEP  NOSCALE  GLOBAL
+                CREATE SEQUENCE   "USERS_LOG_SEQ"  MINVALUE 1 MAXVALUE 999999999999999999999999999 INCREMENT BY 1 START WITH 248 NOCACHE  NOORDER  NOCYCLE  NOKEEP  NOSCALE  GLOBAL
+                CREATE SEQUENCE   "USERS_SEQ"  MINVALUE 1 MAXVALUE 999999999999999999999999999 INCREMENT BY 1 START WITH 1 NOCACHE  NOORDER  NOCYCLE  NOKEEP  NOSCALE  GLOBAL
+                CREATE SEQUENCE   "USER_GROUP_MY_STOCK_SEQ"  MINVALUE 1 MAXVALUE 9999999999999999999999999999 INCREMENT BY 1 START WITH 61 CACHE 20 NOORDER  NOCYCLE  NOKEEP  NOSCALE  GLOBAL
+                CREATE SEQUENCE   "LOGIN_LOG_ID_SEC"  MINVALUE 0 MAXVALUE 999999999999999999999999999 INCREMENT BY 1 START WITH 8692285 NOCACHE  NOORDER  NOCYCLE  NOKEEP  NOSCALE  GLOBAL
+        </pre>
+        <p>
+             <b>CREATE All Package..................</b> <br>
+         </p>
+        <pre class="prettyprint lang-scm">
+                    create or replace PACKAGE USER_AUTH_IP
+            AS
+                FUNCTION CUSTOM_AUTH (P_USERNAME VARCHAR2, P_PASSWORD VARCHAR2)
+                   RETURN BOOLEAN;
+                FUNCTION CUSTOM_HASH (P_USERNAME VARCHAR2, P_PASSWORD VARCHAR2)     
+                RETURN VARCHAR2;
+            END;
+            =======================
+            create or replace PACKAGE BODY USER_AUTH_IP AS FUNCTION CUSTOM_AUTH (P_USERNAME VARCHAR2, P_PASSWORD VARCHAR2)
+                   RETURN BOOLEAN
+                IS
+                   L_PASSWORD          VARCHAR2 (4000);
+                   L_STORED_PASSWORD   VARCHAR2 (4000);
+                   v_Time VARCHAR2 (6);
+                   v_ADDR VARCHAR2 (100);
+                   v_LOGIN_ID VARCHAR2 (100);
+                BEGIN
+                  If P_USERNAME Is Null and P_PASSWORD Is Null Then
+                     Apex_Util.Set_Session_State('LOGIN_MESSAGE','Please enter Username & password.');
+                     Return False;      End If;
+                 select
+            nvl(round(to_number(to_char(max(SESSION_IDLE_TIMEOUT_ON),'SSSSS')/60)),0) - round( to_number(to_char(sysdate,'SSSSS')/60)) into v_Time
+                from apex_workspace_sessions where USER_NAME=(select distinct USER_NAME from apex_workspace_sessions where USER_NAME=upper(P_USERNAME));
+                       if v_Time > 1  then
+                       select REMOTE_ADDR into v_ADDR  from apex_workspace_sessions where USER_NAME=upper(P_USERNAME) and Rownum=1;
+                       else null;
+                       end if;       
+                       SELECT PIN
+                        INTO L_STORED_PASSWORD
+                         Return False;     End If;
+
+                   IF L_PASSWORD = L_STORED_PASSWORD
+                   THEN
+                     insert into USERS_LOG (LOG_ID,IP_ADDRESS,LOGIN_USER,LOGIN_TIME)  
+                RETURN TRUE;
+                END IF;
+                END;
+            FUNCTION CUSTOM_HASH (P_USERNAME VARCHAR2, P_PASSWORD VARCHAR2)
+                RETURN VARCHAR2
+            IS
+                L_PASSWORD   VARCHAR2 (4000);
+                L_SALT       VARCHAR2 (4000) := 'D9GE4CORSJZVKADPOJ5C1PERC704WB';
+            BEGIN
+                   L_PASSWORD :=
+                       UTL_RAW.CAST_TO_RAW (
+                          DBMS_OBFUSCATION_TOOLKIT.MD5 (INPUT_STRING => P_PASSWORD))
+                        RETURN L_PASSWORD;
+                END;
+                END;
+                =====================================
+                2nd Pakge............................
+
+                create or replace PACKAGE  "ACL" 
+                AS
+
+               FUNCTION CUSTOM_AUTH (P_USERNAME VARCHAR2, P_PASSWORD VARCHAR2)
+                  RETURN BOOLEAN;
+               FUNCTION CUSTOM_HASH (P_USERNAME VARCHAR2, P_PASSWORD VARCHAR2)
+                  RETURN VARCHAR2;
+            END;
+            ====================================================
+            create or replace PACKAGE BODY  "ACL" 
+            AS
+            FUNCTION CUSTOM_AUTH (P_USERNAME VARCHAR2, P_PASSWORD VARCHAR2)
+                  RETURN BOOLEAN
+               IS
+                  L_PASSWORD          VARCHAR2 (4000);
+                  L_STORED_PASSWORD   VARCHAR2 (4000);
+               BEGIN
+                   SELECT PIN
+                    INTO L_STORED_PASSWORD
+                    FROM MY_USERS
+                   WHERE is_active = '1' and LOWER (USERNAME) = LOWER (P_USERNAME) and rownum<=1;
+                  L_PASSWORD := CUSTOM_HASH (P_USERNAME, P_PASSWORD);
+                  IF L_PASSWORD = L_STORED_PASSWORD
+                  THEN
+                     insert into USERS_LOG (LOG_ID,IP_ADDRESS,LOGIN_USER,LOGIN_TIME)  
+               RETURN TRUE;
+                  ELSE
+                      insert into e_log(pid, msg) values((select nvl(max(pid),0)+1 from e_log),'not match - user: '|| P_USERNAME || '   pass: ' || P_PASSWORD);
+                     RETURN FALSE;
+                  END IF;
+               EXCEPTION
+                   when NO_DATA_FOUND 
+                  THEN
+                   insert into e_log(pid, msg) values((select nvl(max(pid),0)+1 from e_log),'No User Found - user: '|| P_USERNAME || '   pass: ' || P_PASSWORD);
+                     RETURN false;
+               END;
+            FUNCTION CUSTOM_HASH (P_USERNAME VARCHAR2, P_PASSWORD VARCHAR2)
+               RETURN VARCHAR2
+            IS
+                   L_PASSWORD   VARCHAR2 (4000);
+                   L_SALT       VARCHAR2 (4000) := 'D9GE4CORSJZVKADPOJ5C1PERC704WB';
+                BEGIN 
+                      L_PASSWORD :=
+                      UTL_RAW.CAST_TO_RAW (
+                         DBMS_OBFUSCATION_TOOLKIT.MD5 (INPUT_STRING => P_PASSWORD));
+                       RETURN L_PASSWORD;
+
+            END;
+            END;
+        </pre>
+             <p>
+             <b>CREATE All TRIGGER..................</b> <br>
+         </p>
+        <pre class="prettyprint lang-scm">
+                    CREATE OR REPLACE EDITIONABLE TRIGGER  "AUTO_USER_GROUP_MY_STOCK" 
+              after INSERT
+              ON MY_USERS   REFERENCING NEW AS NEW OLD AS OLD
+              FOR EACH ROW
+            DECLARe
+            begin
+             INSERT INTO USER_GROUP_MY_STOCK (PID, PID_USER, PID_GROUP, IS_ACTIVE, INSERT_BY, INSERT_DATE, UPDATE_BY, UPDATE_DATE)
+            EXCEPTION
+              WHEN OTHERS
+              THEN
+                 RAISE;
+            END;
+            ALTER TRIGGER  "AUTO_USER_GROUP_MY_STOCK" ENABLE
+            CREATE OR REPLACE EDITIONABLE TRIGGER  "BI_MY_USERS" 
+              before insert on "MY_USERS"               
+              for each row  
+            begin   
+              if :NEW."USER_ID" is null then 
+                select "MY_USERS_SEQ".nextval into :NEW."USER_ID" from sys.dual; 
+              end if; 
+            end; 
+            ALTER TRIGGER  "BI_MY_USERS" ENABLE
+            CREATE OR REPLACE EDITIONABLE TRIGGER  "LOGIN_ID_ACL_USER" 
+            BEFORE INSERT OR UPDATE of USER_ID
+            ON MY_USERS 
+            REFERENCING NEW AS New OLD AS Old
+            FOR EACH ROW
+            DECLARE
+            BEGIN
+            :NEW.USER_ID := lower(:NEW.USER_ID);
+               EXCEPTION
+                 WHEN OTHERS THEN
+                   -- Consider logging the error and then re-raise
+                   RAISE;
+            END ;
+            ALTER TRIGGER  "LOGIN_ID_ACL_USER" ENABLE
+
+            CREATE OR REPLACE EDITIONABLE TRIGGER  "PIN_MY_USER" 
+            BEFORE INSERT OR UPDATE of PIN 
+            ON MY_USERS
+            DECLARE
+            BEGIN
+            :new.PIN:=USER_AUTH_IP.CUSTOM_HASH ( :new.USER_ID, :new.PIN); 
+            IF INSERTING
+              THEN
+                 :NEW.ADDED_DATE := SYSDATE;
+              END IF;
+               EXCEPTION
+                 WHEN OTHERS THEN
+                   RAISE;
+            END ;
+            ALTER TRIGGER  "PIN_MY_USER" ENABLE
+            ===========
+            CREATE OR REPLACE EDITIONABLE TRIGGER  "USER_UPDATE_LOGS" 
+              before insert or update on USERS_LOG 
+              for each row 
+            begin 
+              if :new.LOG_ID is null then 
+                :new.LOG_ID := to_number(sys_guid(), 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'); 
+              end if; 
+            end user_update_logs;
+            ALTER TRIGGER  "USER_UPDATE_LOGS" ENABLE
+        </pre><br>
+        <p>
+            <b>
+                If there is any problem with the SQL code provided by me then you can definitely let me know by mail or mobile number and comment. I must give you any SQL code. User Authorization
+            </b>
+        </p>
+        <p>
+            <b>
+               2. Once all tables, sequences, packages, triggers have been created, we will create a new application.
+            </b> <br> &nbsp; &nbsp; &nbsp; Application Name - User Authentication <br>
+            <b>3. Create new forms and report pages for each table.</b><br>
+                <b>4. First create two active and inactive statuses,</b><br>
+                <h3>We will complete the task from the database to make the task easier without creating a form for the two statuses.</h3> <br>
+                <b>5. At this stage we will create some user groups according to the needs of the application.</b> <br>
+                <b>6. Create some users at this stage</b> <br>
+                <b>7. Go To Shared Components </b> >> Authentication Schemes >> Create New Authentication Schemes  <br>
+                    &nbsp; &nbsp; &nbsp; Namd-Custom Auth, >> Scheme Type- Custom, >> Authentication Function Name- ACL.CUSTOM_AUTH
+        </p>
+
+        <p styel="font-size: 20px;"> 
+            <b> See My Demo Application. </b><br/>
+            &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Url- <a href="https://apex.oracle.com/pls/apex/f?p=95068" target="_blank"><b> Demo Application </b></a><br/>
+            &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Username- demo, Pass- demo <br/><br/>
+        </p>
+        <p> 
+            <img alt="Make Custom User Authorization Schemes in Oracle Apex" border="2" class="post-img" 
+            src="https://1.bp.blogspot.com/-MnU0PtsKkSk/YOguyAJ6tvI/AAAAAAAAA_k/tyghzuHiIFcTi4KOf48hRdkYIp80rzblACLcBGAsYHQ/s1591/User%2BAuthentication%2BNew%2BUser.PNG" 
+            title="Make Custom User Authorization Schemes in Oracle Apex" /> <br/><br/>
+
+            <h3> 
+                <b>Links to all the parts related to User Authorization will be given below. </b><br>
+            </h3>
+            1. User Authorization Schemes, Part-1 Video Url- <a href="https://youtu.be/vSdzwnkFDRs" target="_blank"><b> https://youtu.be/vSdzwnkFDRs </b></a><br/>
+            2. Add Create New Account button on the login page, User Authorization, Part-2 Video Url- <a href="https://youtu.be/IajwZ5dp6Qc" target="_blank"><b> https://youtu.be/IajwZ5dp6Qc </b></a><br/>
+            3. Create a ChangePassword Page, User Authorization, Part-3 Video Url- <a href="https://youtu.be/iRXsO0MTOuM" target="_blank"><b> https://youtu.be/iRXsO0MTOuM </b></a><br/>
+            4. Reset Password,  User Authorization, Part-4 Video Url- <a href="https://youtu.be/IK3PjyWGQIA" target="_blank"><b> https://youtu.be/IK3PjyWGQIA </b></a><br/>
+            5. Dynamic Navigation Menu, User Authorization, Part-5 Video Url- <a href="https://youtu.be/Ozoc4cpjBKY" target="_blank"><b> https://youtu.be/Ozoc4cpjBKY </b></a><br/>
+            6. Set Menu According To User Access Role, User Authorization Part-6 Video URL- <a href="https://youtu.be/X407N_N2HNM" target="_blank"><b> https://youtu.be/X407N_N2HNM </b></a><br/>
+            7. Add Edit Button in Report According to User Access Role || Oracle APEX? User Authentication, Part-7. Video URL- <a href="https://youtu.be/n9W64qUoS1E" target="_blank"><b> https://youtu.be/n9W64qUoS1E </b></a><br/>
+            8. Access google authentication in Oracle Apex | Google Authentication. User Authorization Video URL- <a href="https://youtu.be/X407N_N2HNM" target="_blank"><b> https://youtu.be/X407N_N2HNM </b></a><br/>
+            9. Change Password in Email Verification if you Forget Your Password. User Authorization Video URL- <a href="https://youtu.be/MPZQuraig7w" target="_blank"><b> https://youtu.be/MPZQuraig7w </b></a><br/><br/>
+
+
+            Hope you find this post helpful User Authorization. To see more about Oracle Apex User Authorization, you can visit my website. <br/>
+            You can also visit my youtube channel. I try my best to share my education with everyone. I will always try to give you something new. Please help by subscribing to my youtube channel. <br/><br/>
+            <b>Many thanks for visiting the site. </b>
+        </p>
+        <h1>
+            <b> Then Enjoy......................... User Authorization Schemes ||Oracle Apex </b>
+        </h1>
+    </div>
+</body>
+</html>
