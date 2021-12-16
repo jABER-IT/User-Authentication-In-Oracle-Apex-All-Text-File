@@ -1,0 +1,30 @@
+1. Create all menu related tables....................
+
+CREATE TABLE  "USER_GROUP_PAGE_ACCESS" 
+   (	"OID" NUMBER NOT NULL ENABLE, 
+	"PID_GROUP" NUMBER NOT NULL ENABLE, 
+	"PAGE_ID" NUMBER, 
+	"PERMISSION" NUMBER(1,0) DEFAULT 1, 
+	 CONSTRAINT "ACL_GROUP_PAGE_ACCESS_PK" PRIMARY KEY ("OID")
+  USING INDEX  ENABLE, 
+	 CONSTRAINT "ACL_GROUP_PAGE_ACCESS_U01" UNIQUE ("PID_GROUP", "PAGE_ID")
+  USING INDEX  ENABLE
+   )  ENABLE ROW MOVEMENT
+/
+
+2. Create a Blank page.
+3. Create a few items.
+	Example- 1-Filter by Group,  
+	Add Panel= 1 Group, 2- Page
+4. Create a Button Nane- Save Data
+
+5. Create a Dynamic Action  >> Name- Save_Data
+	Create Action >> Refresh >> Selection Type >> Region >> Group Page Permission Report.
+
+6. Give access to all pages according to user group.
+
+7. Go To Global Page - Desktop >> 
+	Create a items, Name- USER_TYPE
+
+8. Go To Login Page >> Process >> Login
+	Edit- select USER_TYPE into :P0_USER_TYPE from MY_USERS where upper(USERNAME) = upper(:P9999_USERNAME );

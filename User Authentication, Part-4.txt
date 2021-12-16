@@ -1,0 +1,22 @@
+1. Go to the Create New User page
+
+2. Create a Button Nane- Reset_Password
+
+3. Create a Dynamic Action  >> Name- Reset Password
+
+	Event >> Page Load
+
+	Action >> Execute Server-side code >> PL/SQL Code>> Paste the following code
+
+		update MY_USERS
+		set pin = 12345
+		where user_id = :P24_USER_ID;
+
+	Items to Submit >> P24_USERNAME,P24_USER_ID
+
+	Action >> Alert- Accretion Process
+
+4. P24_Password Item >> Server-side Condition >> Type-Item is Null >>                     P24_USER_ID
+
+5. Reset_Password Button >> Server-side Condition >> 
+            Type-Item is Not Null >> P24_USER_ID

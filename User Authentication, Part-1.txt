@@ -1,0 +1,376 @@
+1. CREATE All table................
+CREATE TABLE  "MY_USERS" 
+   (	"USER_ID" NUMBER, 
+	"USERNAME" VARCHAR2(50), 
+	"FULL_NAME" VARCHAR2(100), 
+	"PHONE_NUMBER" NUMBER(11,0), 
+	"EMAIL_ADDRESS" VARCHAR2(50), 
+	"IMAGE" BLOB, 
+	"USER_TYPE" VARCHAR2(250), 
+	"SHOP_CATEGORY" VARCHAR2(100), 
+	"IS_ACTIVE" VARCHAR2(10), 
+	"PIN" VARCHAR2(100), 
+	"CREATE_BY" VARCHAR2(50), 
+	"ADDED_DATE" DATE, 
+	"UPDATE_DATE" DATE, 
+	"MIME_TYPE" VARCHAR2(250), 
+	 CONSTRAINT "MY_USERS_PK" PRIMARY KEY ("USER_ID")
+  USING INDEX  ENABLE
+   )
+/
+
+
+CREATE TABLE  "USERS_LOG" 
+   (	"LOG_ID" NUMBER, 
+	"IP_ADDRESS" VARCHAR2(30), 
+	"LOGIN_USER" VARCHAR2(30), 
+	"LOGIN_TIME" TIMESTAMP (6), 
+	"LOGOUT_TIME" TIMESTAMP (6), 
+	"LOG_DATE" DATE, 
+	"CREATED" VARCHAR2(250), 
+	"CREATED_BY" VARCHAR2(250), 
+	"UPDATED_BY" VARCHAR2(250), 
+	"UPDATED" VARCHAR2(250)
+   )  ENABLE ROW MOVEMENT
+/
+
+CREATE INDEX  "ACL_USERLOG_IPADD_IDX" ON  "USERS_LOG" ("IP_ADDRESS")
+/
+
+CREATE INDEX  "LOG_ID_ACL_USER_LOG_IDX" ON  "USERS_LOG" ("LOG_ID", "LOGIN_USER")
+/
+
+CREATE INDEX  "LOG_ID_ACL_USER_LOG_INDX" ON  "USERS_LOG" ("LOG_ID")
+/
+
+
+CREATE TABLE  "E_LOG" 
+   (	"PID" NUMBER, 
+	"MSG" NVARCHAR2(300), 
+	"ERR_DATE" DATE DEFAULT sysdate
+   )  ENABLE ROW MOVEMENT
+/
+
+CREATE INDEX  "E_LOG_PID_IDX" ON  "E_LOG" ("PID")
+/
+
+
+CREATE TABLE  "USER_GROUP" 
+   (	"OID" NUMBER, 
+	"PID_PARENT" NUMBER, 
+	"GROUP_TITLE" NVARCHAR2(30), 
+	"GROUP_DESCRIPTION" NVARCHAR2(250), 
+	"IS_ACTIVE" NVARCHAR2(1), 
+	"Create_By" VARCHAR2(200), 
+	"Create_Date" DATE, 
+	"Update By" VARCHAR2(200), 
+	"UPDATE_DATE" DATE, 
+	 CONSTRAINT "ACL_GROUP_PK" PRIMARY KEY ("OID")
+  USING INDEX  ENABLE
+   )  ENABLE ROW MOVEMENT
+/
+
+
+CREATE TABLE  "USER_GROUP_MY_STOCK" 
+   (	"PID" NUMBER NOT NULL ENABLE, 
+	"PID_USER" NUMBER NOT NULL ENABLE, 
+	"PID_GROUP" NUMBER NOT NULL ENABLE, 
+	"IS_ACTIVE" VARCHAR2(1), 
+	"INSERT_BY" VARCHAR2(200), 
+	"UPDATE_BY" VARCHAR2(200), 
+	"UPDATE_DATE" DATE, 
+	"INSERT_DATE" DATE, 
+	 CONSTRAINT "USER_GROUP_MY_STOCK_PK" PRIMARY KEY ("PID")
+  USING INDEX  ENABLE
+   )  ENABLE ROW MOVEMENT
+/
+
+CREATE TABLE  "IS_ACTIVATE" 
+   (	"OID" NUMBER, 
+	"STATUS" VARCHAR2(30),
+	CONSTRAINT "IS_ACTIVATE_PK" PRIMARY KEY ("OID")
+  USING INDEX  ENABLE
+   )  ENABLE ROW MOVEMENT
+/
+
+==============================================================
+
+2. CREATE All SEQUENCE...............
+
+ CREATE SEQUENCE   "MY_USERS_SEQ"  MINVALUE 1 MAXVALUE 9999999999999999999999999999 INCREMENT BY 1 START WITH 361 CACHE 20 NOORDER  NOCYCLE  NOKEEP  NOSCALE  GLOBAL
+/
+ CREATE SEQUENCE   "USERS_LOG_SEQ"  MINVALUE 1 MAXVALUE 999999999999999999999999999 INCREMENT BY 1 START WITH 248 NOCACHE  NOORDER  NOCYCLE  NOKEEP  NOSCALE  GLOBAL
+/
+ CREATE SEQUENCE   "USERS_SEQ"  MINVALUE 1 MAXVALUE 999999999999999999999999999 INCREMENT BY 1 START WITH 1 NOCACHE  NOORDER  NOCYCLE  NOKEEP  NOSCALE  GLOBAL
+/
+ CREATE SEQUENCE   "USER_GROUP_MY_STOCK_SEQ"  MINVALUE 1 MAXVALUE 9999999999999999999999999999 INCREMENT BY 1 START WITH 61 CACHE 20 NOORDER  NOCYCLE  NOKEEP  NOSCALE  GLOBAL
+/
+ CREATE SEQUENCE   "LOGIN_LOG_ID_SEC"  MINVALUE 0 MAXVALUE 999999999999999999999999999 INCREMENT BY 1 START WITH 8692285 NOCACHE  NOORDER  NOCYCLE  NOKEEP  NOSCALE  GLOBAL
+/
+==============================================================
+
+3. CREATE All Package..................
+1st =======================
+
+create or replace PACKAGE USER_AUTH_IP
+AS
+
+    FUNCTION CUSTOM_AUTH (P_USERNAME VARCHAR2, P_PASSWORD VARCHAR2)
+       RETURN BOOLEAN;
+    FUNCTION CUSTOM_HASH (P_USERNAME VARCHAR2, P_PASSWORD VARCHAR2)     
+    RETURN VARCHAR2;
+END;
+=======================
+create or replace PACKAGE BODY USER_AUTH_IP AS FUNCTION CUSTOM_AUTH (P_USERNAME VARCHAR2, P_PASSWORD VARCHAR2)
+       RETURN BOOLEAN
+    IS
+       L_PASSWORD          VARCHAR2 (4000);
+       L_STORED_PASSWORD   VARCHAR2 (4000);
+       v_Time VARCHAR2 (6);
+       v_ADDR VARCHAR2 (100);
+       v_LOGIN_ID VARCHAR2 (100);
+
+    BEGIN
+
+      If P_USERNAME Is Null and P_PASSWORD Is Null Then
+         Apex_Util.Set_Session_State('LOGIN_MESSAGE','Please enter Username & password.');
+         Return False;      End If;
+
+      If P_USERNAME Is not Null and P_PASSWORD Is Null Then
+         Apex_Util.Set_Session_State('LOGIN_MESSAGE','Please enter valid password.');
+         Return False;      End If;
+
+      If P_USERNAME Is Null and P_PASSWORD Is not Null Then
+         Apex_Util.Set_Session_State('LOGIN_MESSAGE','Please enter valid Username.');
+         Return False;      End If;
+        
+     select
+nvl(round(to_number(to_char(max(SESSION_IDLE_TIMEOUT_ON),'SSSSS')/60)),0) - round( to_number(to_char(sysdate,'SSSSS')/60)) into v_Time
+    from apex_workspace_sessions where USER_NAME=(select distinct USER_NAME from apex_workspace_sessions where USER_NAME=upper(P_USERNAME));
+
+
+       if v_Time > 1  then
+       select REMOTE_ADDR into v_ADDR  from apex_workspace_sessions where USER_NAME=upper(P_USERNAME) and Rownum=1;
+       Apex_Util.Set_Session_State('LOGIN_MESSAGE',P_USERNAME ||' is already logged in from IP '||v_ADDR);
+       Return False;
+       else null;
+       end if;       
+       
+       SELECT PIN
+        INTO L_STORED_PASSWORD
+        FROM MY_USERS
+       WHERE is_active = '1' and LOWER (USERNAME) = LOWER (P_USERNAME) and rownum<=1;
+             
+--        LOWER (USER_ID) = LOWER(P_USERNAME)
+        
+       L_PASSWORD := CUSTOM_HASH (P_USERNAME, P_PASSWORD);
+
+       If L_PASSWORD <> L_STORED_PASSWORD Then
+         Apex_Util.Set_Session_State('LOGIN_MESSAGE','Please enter your valid Username & password.');
+         Return False;     End If;
+
+       IF L_PASSWORD = L_STORED_PASSWORD
+       THEN
+         insert into USERS_LOG (LOG_ID,IP_ADDRESS,LOGIN_USER,LOGIN_TIME)  
+         values (login_log_id_sec.nextval,owa_util.get_cgi_env('REMOTE_ADDR'),P_USERNAME,sysdate);
+         insert into e_log(pid, msg) values((select nvl(max(pid),0)+1  from e_log),'match - user: '|| P_USERNAME || '   pass: ' || P_PASSWORD);
+    RETURN TRUE;
+    END IF;
+    END;
+
+FUNCTION CUSTOM_HASH (P_USERNAME VARCHAR2, P_PASSWORD VARCHAR2)
+    RETURN VARCHAR2
+IS
+    L_PASSWORD   VARCHAR2 (4000);
+    L_SALT       VARCHAR2 (4000) := 'D9GE4CORSJZVKADPOJ5C1PERC704WB';
+BEGIN
+       L_PASSWORD :=
+       UTL_RAW.CAST_TO_RAW (
+          DBMS_OBFUSCATION_TOOLKIT.MD5 (INPUT_STRING => P_PASSWORD));
+
+        RETURN L_PASSWORD;
+END;
+END;
+=====================================
+2nd Pakge............................
+
+create or replace PACKAGE  "ACL" 
+AS
+
+   FUNCTION CUSTOM_AUTH (P_USERNAME VARCHAR2, P_PASSWORD VARCHAR2)
+      RETURN BOOLEAN;
+   FUNCTION CUSTOM_HASH (P_USERNAME VARCHAR2, P_PASSWORD VARCHAR2)
+      RETURN VARCHAR2;
+END;
+
+====================================================
+create or replace PACKAGE BODY  "ACL" 
+AS
+FUNCTION CUSTOM_AUTH (P_USERNAME VARCHAR2, P_PASSWORD VARCHAR2)
+      RETURN BOOLEAN
+   IS
+      L_PASSWORD          VARCHAR2 (4000);
+      L_STORED_PASSWORD   VARCHAR2 (4000);
+   BEGIN
+       SELECT PIN
+        INTO L_STORED_PASSWORD
+        FROM MY_USERS
+       WHERE is_active = '1' and LOWER (USERNAME) = LOWER (P_USERNAME) and rownum<=1;
+      L_PASSWORD := CUSTOM_HASH (P_USERNAME, P_PASSWORD);
+      -- Finally, we compare them to see if they are the same and return
+      -- either TRUE or FALSE
+      -- RETURN TRUE;
+      IF L_PASSWORD = L_STORED_PASSWORD
+      THEN
+         insert into USERS_LOG (LOG_ID,IP_ADDRESS,LOGIN_USER,LOGIN_TIME)  
+         values (login_log_id_sec.nextval,owa_util.get_cgi_env('REMOTE_ADDR'),P_USERNAME,sysdate);
+            insert into e_log(pid, msg) values((select nvl(max(pid),0)+1 from e_log),'match - user: '|| P_USERNAME || '   pass: ' || P_PASSWORD);
+
+   RETURN TRUE;
+      ELSE
+          insert into e_log(pid, msg) values((select nvl(max(pid),0)+1 from e_log),'not match - user: '|| P_USERNAME || '   pass: ' || P_PASSWORD);
+         RETURN FALSE;
+      END IF;
+
+   EXCEPTION
+       when NO_DATA_FOUND 
+      
+      THEN
+       insert into e_log(pid, msg) values((select nvl(max(pid),0)+1 from e_log),'No User Found - user: '|| P_USERNAME || '   pass: ' || P_PASSWORD);
+         RETURN false;
+   END;
+
+
+FUNCTION CUSTOM_HASH (P_USERNAME VARCHAR2, P_PASSWORD VARCHAR2)
+   RETURN VARCHAR2
+IS
+   L_PASSWORD   VARCHAR2 (4000);
+   L_SALT       VARCHAR2 (4000) := 'D9GE4CORSJZVKADPOJ5C1PERC704WB';
+BEGIN
+      
+      L_PASSWORD :=
+      UTL_RAW.CAST_TO_RAW (
+         DBMS_OBFUSCATION_TOOLKIT.MD5 (INPUT_STRING => P_PASSWORD));
+   
+       RETURN L_PASSWORD;
+
+END;
+END;
+
+=================================================
+
+4. CREATE All TRIGGER..................
+
+CREATE OR REPLACE EDITIONABLE TRIGGER  "AUTO_USER_GROUP_MY_STOCK" 
+  after INSERT
+  ON MY_USERS   REFERENCING NEW AS NEW OLD AS OLD
+  FOR EACH ROW
+DECLARe
+begin
+ INSERT INTO USER_GROUP_MY_STOCK (PID, PID_USER, PID_GROUP, IS_ACTIVE, INSERT_BY, INSERT_DATE, UPDATE_BY, UPDATE_DATE)
+ VALUES (USER_GROUP_MY_STOCK_SEQ.nextval,:new.USER_ID,:new.USER_TYPE,:new.IS_ACTIVE,upper(V('USER')),sysdate,upper(V('USER')),sysdate);
+
+EXCEPTION
+  WHEN OTHERS
+  THEN
+     RAISE;
+END;
+
+/
+ALTER TRIGGER  "AUTO_USER_GROUP_MY_STOCK" ENABLE
+/
+
+CREATE OR REPLACE EDITIONABLE TRIGGER  "BI_MY_USERS" 
+  before insert on "MY_USERS"               
+  for each row  
+begin   
+  if :NEW."USER_ID" is null then 
+    select "MY_USERS_SEQ".nextval into :NEW."USER_ID" from sys.dual; 
+  end if; 
+end; 
+
+/
+ALTER TRIGGER  "BI_MY_USERS" ENABLE
+/
+
+CREATE OR REPLACE EDITIONABLE TRIGGER  "LOGIN_ID_ACL_USER" 
+BEFORE INSERT OR UPDATE of USER_ID
+ON MY_USERS 
+REFERENCING NEW AS New OLD AS Old
+FOR EACH ROW
+DECLARE
+BEGIN
+:NEW.USER_ID := lower(:NEW.USER_ID);
+   EXCEPTION
+     WHEN OTHERS THEN
+       -- Consider logging the error and then re-raise
+       RAISE;
+END ;
+
+/
+ALTER TRIGGER  "LOGIN_ID_ACL_USER" ENABLE
+/
+
+CREATE OR REPLACE EDITIONABLE TRIGGER  "PIN_MY_USER" 
+BEFORE INSERT OR UPDATE of PIN 
+ON MY_USERS
+REFERENCING NEW AS New OLD AS Old
+FOR EACH ROW
+DECLARE
+BEGIN
+:new.PIN:=USER_AUTH_IP.CUSTOM_HASH ( :new.USER_ID, :new.PIN); 
+
+
+IF INSERTING
+  THEN
+     :NEW.ADDED_DATE := SYSDATE;
+  ELSIF UPDATING
+  THEN
+     :NEW.UPDATE_DATE := SYSDATE;
+  END IF;
+   EXCEPTION
+     WHEN OTHERS THEN
+       RAISE;
+END ;
+
+
+/
+ALTER TRIGGER  "PIN_MY_USER" ENABLE
+/
+
+===========
+CREATE OR REPLACE EDITIONABLE TRIGGER  "USER_UPDATE_LOGS" 
+  before insert or update on USERS_LOG 
+  for each row 
+begin 
+  if :new.LOG_ID is null then 
+    :new.LOG_ID := to_number(sys_guid(), 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'); 
+  end if; 
+  if inserting then 
+    :new.created := localtimestamp; 
+    :new.created_by := nvl(sys_context('APEX$SESSION','APP_USER'),user); 
+  end if; 
+  :new.updated := localtimestamp; 
+  :new.updated_by := nvl(sys_context('APEX$SESSION','APP_USER'),user); 
+end user_update_logs;
+
+/
+ALTER TRIGGER  "USER_UPDATE_LOGS" ENABLE
+/
+==============================================================
+
+5. Once all tables, sequences, packages, triggers have been created, we will create a new application later.
+	Name-User Authentication
+
+6. Create new forms and report pages for each table.
+
+7. First create two active and inactive statuses,
+
+We will complete the task from the database to make the task easier without creating a form for the two statuses.
+
+8. At this stage we will create some user groups according to the needs of the application.
+
+9. Create some users at this stage
+
+10. Go To Shared Components >> Authentication Schemes >> Create New Authentication Schemes 
+	Namd-Custom Auth, >> Scheme Type- Custom, >> Authentication Function Name- ACL.CUSTOM_AUTH

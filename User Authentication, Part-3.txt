@@ -1,0 +1,41 @@
+How To Create a Change Password Page In Oracle Apex? 
+User Authentication, Part-3
+
+=================================================================================================
+
+1.Create a New Blank page >>  Name- Change Password Page
+2. Create a New Region. Name-Password Change 
+3. Create a 5 items.
+	Example- 1- USER_ID, 2-USUSERNAME, 3-OLD_PASSWORD, 4-NEW_PASSWORD, 5-CONFIRM_NEW_PASSWORD
+4. Create a Button Nane- Submit
+5. Create a Dynamic Action  >> Name- Get User Id
+	Event >> Page Load
+	Action >> Set Value >> Set Type- SQL Statement >> Paste the following code
+		select USER_ID from MY_USERS WHERE upper(USERNAME) = :APP_USER
+	Affected Elements >> Item(s) >> P2_USER_ID
+
+6. Create Validating >> Name- Old Password >> Validation Type- Function Body (returning Boolean) >> 
+   PL/SQL Code >> Paste the following code
+	begin
+	   return acl.CUSTOM_AUTH(acl.GET_CURRENT_USER,:P14_OLD_PASSWORD);
+	end;
+
+Error Message >> Old Password does not match
+Display Location >> Inline With Field
+Associated Item >> :P2_OLD_PASSWORD
+
+7. Create Validating >> Name- New Password >> Validation Type- Expression >> 
+	PL/SQL Code >> Paste the following code
+	    :P2_NEW_PASSWORD = :P2_CONFIRM_NEW_PASSWORD
+
+Error Message >> New Password doesn't match to each other!!!
+Display Location >> Inline With Field
+Associated Item >> :P2_NEW_PASSWORD
+ 
+
+8. Create a Process >> Name- Update Processes, >> PL/SQL Code >> Paste the following code
+	update MY_USERS
+		set PASSWORD = :P2_CONFIRM_NEW_PASSWORD,
+		pin = :P2_CONFIRM_NEW_PASSWORD
+		where upper(username) = upper(:app_user) and user_id = :P2_USER_ID;
+	When Button Pressed >> Submit

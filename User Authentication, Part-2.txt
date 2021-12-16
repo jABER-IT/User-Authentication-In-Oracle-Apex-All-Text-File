@@ -1,0 +1,46 @@
+1. Go To Login Page.
+2. Create a Button, Name- Create New Account.
+3. Go to the Create New User page.
+4. Goto Page Properties >> Appearance >> Page Mode >> Modal Dialog.
+                Security >> Page Is Public
+                CSS >> Inline  >> Paste the following code -
+                    
+                #t_Body_content_offset  {
+    height: 3px !important;
+}
+.t-Breadcrumb-label {  
+    display: none;  
+}
+.t-Region-headerItems--title {
+    text-align: center;
+    padding: 0.6rem 1.2rem;
+}
+.t-Report-colHead {
+    padding: 5px;
+}
+.t-Report-cell {
+    padding: 3px 10px;
+}
+body .ui-dialog .ui-dialog-titlebar {
+    background-color: #ff0202b5; }
+.ui-corner-all, .ui-corner-bottom, .ui-corner-left, .ui-corner-bl {
+  border-bottom-left-radius: 1px !important;
+    border-bottom-right-radius: 1px !important;
+  background-color: aliceblue;
+}
+body .ui-dialog--notification.ui-dialog .ui-dialog-content, body .ui-dialog--notificationLarge.ui-dialog .ui-dialog-content {
+    min-height: auto!important;
+    padding: 0 32px 36px;
+    color: #000;
+    font-size: medium;
+}
+.t-Region-title {
+      font-weight: 700;
+}      
+
+5. Create a Process >> Name- Close Dialoge
+	Execution Options >> Processing
+6. Go to the Login Page again.
+7. Go to Create New Account Button Properties >> 
+                Behavior >> Action >> Redirect To Page
+                Target >> Enter the page number to create your user.
